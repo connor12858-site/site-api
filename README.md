@@ -1,72 +1,146 @@
-# OpenAPI Template
+# Site API
 
-[![Deploy to Cloudflare](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/cloudflare/templates/tree/main/chanfana-openapi-template)
+Site API is a Cloudflare Worker backend for commander-scoped Elite Dangerous publishing data.
 
-![OpenAPI Template Preview](https://imagedelivery.net/wSMYJvS3Xw-n339CbDyDIA/91076b39-1f5b-46f6-7f14-536a6f183000/public)
+## What This API Stores
 
-<!-- dash-content-start -->
+All resources are scoped by commander using this route prefix:
 
-This is a Cloudflare Worker with OpenAPI 3.1 Auto Generation and Validation using [chanfana](https://github.com/cloudflare/chanfana) and [Hono](https://github.com/honojs/hono).
+`/cmdr/:cmdr_name/...`
 
-This is an example project made to be used as a quick start into building OpenAPI compliant Workers that generates the
-`openapi.json` schema automatically from code and validates the incoming request to the defined parameters or request body.
+Supported resource families:
 
-This template includes various endpoints, a D1 database, and integration tests using [Vitest](https://vitest.dev/) as examples. In endpoints, you will find [chanfana D1 AutoEndpoints](https://chanfana.com/endpoints/auto/d1) and a [normal endpoint](https://chanfana.com/endpoints/defining-endpoints) to serve as examples for your projects.
+1. Ship transfers
+2. Mission countdowns
+3. System builds
+4. Part transfers
 
-Besides being able to see the OpenAPI schema (openapi.json) in the browser, you can also extract the schema locally no hassle by running this command `npm run schema`.
+Commander names are normalized to lowercase when stored and queried.
 
-<!-- dash-content-end -->
+## Docs
 
-> [!IMPORTANT]
-> When using C3 to create this project, select "no" when it asks if you want to deploy. You need to follow this project's [setup steps](https://github.com/cloudflare/templates/tree/main/openapi-template#setup-steps) before deploying.
+After running locally:
 
-## Getting Started
+1. Interactive docs: `http://127.0.0.1:8787/`
+2. OpenAPI JSON: `http://127.0.0.1:8787/openapi.json`
+3. Root project summary: `http://127.0.0.1:8787/meta`
 
-Outside of this repo, you can start a new project with this template using [C3](https://developers.cloudflare.com/pages/get-started/c3/) (the `create-cloudflare` CLI):
+## Route Overview
+
+Each resource supports full CRUD under commander scope.
+
+### Ship Transfers
+
+1. `POST /cmdr/:cmdr_name/ship-transfers`
+2. `GET /cmdr/:cmdr_name/ship-transfers`
+3. `GET /cmdr/:cmdr_name/ship-transfers/:id`
+4. `PUT /cmdr/:cmdr_name/ship-transfers/:id`
+5. `DELETE /cmdr/:cmdr_name/ship-transfers/:id`
+
+Payload fields:
+
+1. `timestamp` (ISO-8601 datetime string)
+2. `ship_type` (string)
+3. `ship_type_localised` (string)
+4. `transfer_time` (integer seconds)
+
+### Mission Countdowns
+
+1. `POST /cmdr/:cmdr_name/mission-countdowns`
+2. `GET /cmdr/:cmdr_name/mission-countdowns`
+3. `GET /cmdr/:cmdr_name/mission-countdowns/:id`
+4. `PUT /cmdr/:cmdr_name/mission-countdowns/:id`
+5. `DELETE /cmdr/:cmdr_name/mission-countdowns/:id`
+
+Payload fields:
+
+1. `localised_name` (string)
+2. `destination_system` (string)
+3. `expiry` (ISO-8601 datetime string)
+
+### System Builds
+
+1. `POST /cmdr/:cmdr_name/system-builds`
+2. `GET /cmdr/:cmdr_name/system-builds`
+3. `GET /cmdr/:cmdr_name/system-builds/:id`
+4. `PUT /cmdr/:cmdr_name/system-builds/:id`
+5. `DELETE /cmdr/:cmdr_name/system-builds/:id`
+
+Payload fields:
+
+1. `station_name` (string)
+2. `construction_progress` (integer)
+3. `resources_required` (array of strict objects)
+
+`resources_required` item shape:
+
+1. `name_localised` (string)
+2. `required_amount` (integer)
+3. `provided_amount` (integer)
+
+### Part Transfers
+
+1. `POST /cmdr/:cmdr_name/part-transfers`
+2. `GET /cmdr/:cmdr_name/part-transfers`
+3. `GET /cmdr/:cmdr_name/part-transfers/:id`
+4. `PUT /cmdr/:cmdr_name/part-transfers/:id`
+5. `DELETE /cmdr/:cmdr_name/part-transfers/:id`
+
+Payload fields:
+
+1. `timestamp` (ISO-8601 datetime string)
+2. `stored_item_localised` (string)
+3. `transfer_time` (integer seconds)
+
+## Local Development
+
+1. Install dependencies:
 
 ```bash
-npm create cloudflare@latest -- --template=cloudflare/templates/openapi-template
+npm install
 ```
 
-A live public deployment of this template is available at [https://openapi-template.templates.workers.dev](https://openapi-template.templates.workers.dev)
+2. Apply local migrations:
 
-## Setup Steps
+```bash
+npm run seedLocalDb
+```
 
-1. Install the project dependencies with a package manager of your choice:
-   ```bash
-   npm install
-   ```
-2. Create a [D1 database](https://developers.cloudflare.com/d1/get-started/) with the name "openapi-template-db":
-   ```bash
-   npx wrangler d1 create openapi-template-db
-   ```
-   ...and update the `database_id` field in `wrangler.json` with the new database ID.
-3. Run the following db migration to initialize the database (notice the `migrations` directory in this project):
-   ```bash
-   npx wrangler d1 migrations apply DB --remote
-   ```
-4. Deploy the project!
-   ```bash
-   npx wrangler deploy
-   ```
-5. Monitor your worker
-   ```bash
-   npx wrangler tail
-   ```
+3. Start the worker locally:
+
+```bash
+npm run dev
+```
 
 ## Testing
 
-This template includes integration tests using [Vitest](https://vitest.dev/). To run the tests locally:
+Run integration tests:
 
 ```bash
 npm run test
 ```
 
-Test files are located in the `tests/` directory, with examples demonstrating how to test your endpoints and database interactions.
+Key test suites:
 
-## Project structure
+1. `tests/integration/commanderPublishing.test.ts`
+2. `tests/integration/tasks.test.ts`
+3. `tests/integration/dummyEndpoint.test.ts`
 
-1. Your main router is defined in `src/index.ts`.
-2. Each endpoint has its own file in `src/endpoints/`.
-3. Integration tests are located in the `tests/` directory.
-4. For more information read the [chanfana documentation](https://chanfana.com/), [Hono documentation](https://hono.dev/docs), and [Vitest documentation](https://vitest.dev/guide/).
+## Database Migrations
+
+Relevant migration files:
+
+1. `migrations/0001_add_tasks_table.sql`
+2. `migrations/0002_add_commander_publish_tables.sql`
+
+Apply remote migrations before deploy:
+
+```bash
+npx wrangler d1 migrations apply DB --remote
+```
+
+## Deploy
+
+```bash
+npm run deploy
+```
